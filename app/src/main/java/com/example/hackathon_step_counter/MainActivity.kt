@@ -9,11 +9,17 @@ import android.widget.*
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.*
 import java.util.concurrent.TimeUnit
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.Context.RECEIVER_NOT_EXPORTED
+
 
 class MainActivity : Activity(), SensorEventListener {
 
@@ -30,12 +36,13 @@ class MainActivity : Activity(), SensorEventListener {
     private var lastAccelX = 0.0f
     private var lastAccelY = 0.0f
     private var lastAccelZ = 0.0f
-    private val threshold = 20.0f
+    private val threshold = 25.0f
 
     private var exerciseTimer: CountDownTimer? = null
     private var selectedMinutes = 1
     private var currentWorkRequest: WorkRequest? = null
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -104,6 +111,16 @@ class MainActivity : Activity(), SensorEventListener {
             stepTextView.text = "Accelerometer sensor not available"
             Log.e("STEP_DEBUG", "Accelerometer sensor not available")
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(resetReceiver, IntentFilter("RESET_STEP_COUNTER"), RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(resetReceiver, IntentFilter("RESET_STEP_COUNTER"))
+        }
+
+
+        scheduleDailyResetWorker()
     }
 
     override fun onResume() {
@@ -216,4 +233,39 @@ class MainActivity : Activity(), SensorEventListener {
             WorkManager.getInstance(this).cancelWorkById(it.id)
         }
     }
+    private val resetReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            baselineSteps = 0
+            dist = 0.0
+            runOnUiThread {
+                stepTextView.text = "Steps: 0"
+                distanceTextView.text = "Distance (in km): 0.00"
+            }
+        }
+    }
+    private fun scheduleDailyResetWorker() {
+        val now = java.util.Calendar.getInstance()
+        val due = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+            if (before(now)) {
+                add(java.util.Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+
+        val initialDelay = due.timeInMillis - now.timeInMillis
+
+        val dailyResetRequest = PeriodicWorkRequestBuilder<ResetWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "daily_step_reset",
+            ExistingPeriodicWorkPolicy.REPLACE,
+            dailyResetRequest
+        )
+    }
+
 }

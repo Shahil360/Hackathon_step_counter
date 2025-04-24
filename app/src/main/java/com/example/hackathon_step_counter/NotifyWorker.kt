@@ -34,7 +34,7 @@ class NotifyWorker(appContext: Context, workerParams: WorkerParameters)
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setContentTitle("⏰ Time's Up")
-            .setContentText("20 minutes have passed.")
+            .setContentText("Timer has ended! ⏰")
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Or use your own icon
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))

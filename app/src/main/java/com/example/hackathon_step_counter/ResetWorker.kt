@@ -1,5 +1,5 @@
 package com.example.hackathon_step_counter
-
+// used for restting the counter at midnight everyday
 import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters

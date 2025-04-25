@@ -26,6 +26,7 @@ class MainActivity : Activity(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var accelerometerSensor: Sensor? = null
 
+    //variables for the text and button elements
     private var baselineSteps = 0
     private var dist = 0.0
     private lateinit var stepTextView: TextView
@@ -33,9 +34,11 @@ class MainActivity : Activity(), SensorEventListener {
     private lateinit var timerTextView: TextView
     private lateinit var startButton: Button
 
+    //values for accelerometer
     private var lastAccelX = 0.0f
     private var lastAccelY = 0.0f
     private var lastAccelZ = 0.0f
+    //manually set threshold to mimic phone movements during walking
     private val threshold = 25.0f
 
     private var exerciseTimer: CountDownTimer? = null
@@ -53,7 +56,7 @@ class MainActivity : Activity(), SensorEventListener {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
-
+        // view definitions for the different elements
         stepTextView = TextView(this).apply {
             text = "Steps: 0"
             textSize = 24f
@@ -69,7 +72,7 @@ class MainActivity : Activity(), SensorEventListener {
             textSize = 24f
             gravity = Gravity.CENTER
         }
-
+        // start and reset timer buttons
         startButton = Button(this).apply {
             text = "Select Time & Start"
             setOnClickListener {
@@ -80,7 +83,7 @@ class MainActivity : Activity(), SensorEventListener {
                 }
             }
         }
-
+        
         val resetButton = Button(this).apply {
             text = "Reset Timer"
             setOnClickListener {
@@ -88,6 +91,7 @@ class MainActivity : Activity(), SensorEventListener {
             }
         }
 
+        // layout of the screen (not using composables)
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -107,6 +111,7 @@ class MainActivity : Activity(), SensorEventListener {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
+        // check for accelerometer sensor availibility
         if (accelerometerSensor == null) {
             stepTextView.text = "Accelerometer sensor not available"
             Log.e("STEP_DEBUG", "Accelerometer sensor not available")
@@ -143,6 +148,7 @@ class MainActivity : Activity(), SensorEventListener {
 
             val accelMagnitude = Math.sqrt((accelX * accelX + accelY * accelY + accelZ * accelZ).toDouble())
 
+            // check for step. If YES -> increase step counter by one and distance (0.74m = approx. 1 step)
             if (accelMagnitude - lastAccelX > threshold) {
                 baselineSteps++
                 dist += baselineSteps * 0.00074
@@ -215,6 +221,7 @@ class MainActivity : Activity(), SensorEventListener {
         Toast.makeText(this, "Timer reset", Toast.LENGTH_SHORT).show()
     }
 
+    // ---------------------- Notifications---------------------------------
     private fun scheduleNotificationWorker(minutes: Int) {
         cancelNotificationWorker()
 
@@ -233,6 +240,7 @@ class MainActivity : Activity(), SensorEventListener {
             WorkManager.getInstance(this).cancelWorkById(it.id)
         }
     }
+    // resetting functionality
     private val resetReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             baselineSteps = 0
@@ -243,6 +251,7 @@ class MainActivity : Activity(), SensorEventListener {
             }
         }
     }
+    // resets counter everyday at midnight
     private fun scheduleDailyResetWorker() {
         val now = java.util.Calendar.getInstance()
         val due = java.util.Calendar.getInstance().apply {
